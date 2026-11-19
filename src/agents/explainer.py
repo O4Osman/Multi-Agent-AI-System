@@ -120,7 +120,8 @@ After writing the explanation, store what you explain:
 tool_memroy_set(session_id, 'explained_topics', <comma-separated topic titles>)
 
 If the notes don't cover the topic, explain from general knowledge
-and say "Your notes don't cover this specifically, but here's the concept:"
+and say "Your notes don't cover this specifically, but here's the concept:" and explain the topic instead of saying
+I've explained Python Basics and Syntax based on your study notes just explain the topic.
 """
 
 

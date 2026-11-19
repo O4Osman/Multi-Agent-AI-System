@@ -36,6 +36,9 @@ chroma_db
 *.spec
 
 .deepeval/*
+.streamlit/secrets.toml
+.claude/*
+data
 
 # Installer logs
 pip-log.txt

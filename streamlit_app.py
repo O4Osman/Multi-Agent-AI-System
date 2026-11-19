@@ -42,6 +42,13 @@ import uuid
 import streamlit as st
 from langgraph.types import Command
 
+# Must be the first Streamlit command in the script.
+st.set_page_config(
+    page_title="Learning Accelerator",
+    page_icon="🎓",
+    layout="centered",
+)
+
 
 # ── Deployment setup (Streamlit Cloud) ────────────────────────────────────────
 # Must run before the agent modules are imported: they read env vars at import.
@@ -66,19 +73,36 @@ if os.getenv("START_SIDECARS", "false").lower() == "true":
     os.environ["STUDY_BUDDY_URL"] = f"http://127.0.0.1:{BUDDY_PORT}"
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def start_sidecars():
     """Start the A2A quiz service and Study Buddy once per server process."""
+    import atexit
+    import socket
+
+    def port_in_use(port: int) -> bool:
+        with socket.socket() as s:
+            s.settimeout(0.5)
+            return s.connect_ex(("127.0.0.1", port)) == 0
+
     root = Path(__file__).parent
     env = {**os.environ, "PYTHONPATH": str(root / "src")}
-    scripts = [
-        root / "src" / "a2a_services" / "quiz_service.py",
-        root / "src" / "crewai_agent" / "study_buddy.py",
+    services = [
+        (QUIZ_PORT, root / "src" / "a2a_services" / "quiz_service.py"),
+        (BUDDY_PORT, root / "src" / "crewai_agent" / "study_buddy.py"),
     ]
-    return [
-        subprocess.Popen([sys.executable, str(s)], env=env, cwd=str(root))
-        for s in scripts
-    ]
+    procs = []
+    for port, script in services:
+        if port_in_use(port):
+            print(f"[Sidecars] port {port} already in use, reusing the running service")
+            continue
+        procs.append(subprocess.Popen([sys.executable, str(script)], env=env, cwd=str(root)))
+
+    def _stop():
+        for p in procs:
+            if p.poll() is None:
+                p.terminate()
+    atexit.register(_stop)
+    return procs
 
 if os.getenv("START_SIDECARS", "false").lower() == "true":
     start_sidecars()
@@ -96,14 +120,6 @@ from agents.quiz_generator import generate_questions, grade_answer
 ui_graph = build_graph(
     db_path="data/checkpoints_ui.db",
     interrupt_before=["quiz_generator"],
-)
-
-
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Learning Accelerator",
-    page_icon="🎓",
-    layout="centered",
 )
 
 

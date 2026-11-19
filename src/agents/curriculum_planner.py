@@ -32,7 +32,7 @@ The JSON must match this exact schema:
 Rules:
 - Order topics from foundational to advanced
 - prerequisites must reference earlier topic titles exactly as written
-- Aim for 4 to 6 topics
+- Aim for 2 to 3 topics
 - status must always be "pending"
 """
 

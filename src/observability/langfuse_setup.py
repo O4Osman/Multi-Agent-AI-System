@@ -12,9 +12,29 @@ def _langfuse_configured() -> bool:
     )
 
 
+def _langfuse_reachable(timeout: float = 2.0) -> bool:
+    """True if the Langfuse server answers; avoids tracing into a dead host."""
+    import httpx
+
+    base = (
+        os.getenv("LANGFUSE_BASE_URL")
+        or os.getenv("LANGFUSE_HOST")
+        or "https://cloud.langfuse.com"
+    ).rstrip("/")
+    try:
+        httpx.get(f"{base}/api/public/health", timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
 def get_langfuse_handler(session_id: str, user_id: str = "local"):
     """Create a Langfuse callback handler."""
     if not _langfuse_configured():
+        return None
+
+    if not _langfuse_reachable():
+        print("[Observability] Langfuse server unreachable, tracing disabled.")
         return None
 
     try:
@@ -72,7 +92,7 @@ def get_langfuse_config(
 def flush_langfuse() -> None:
     """Flush pending Langfuse events."""
 
-    if not _langfuse_configured():
+    if not _langfuse_configured() or not _langfuse_reachable():
         return
 
     try:

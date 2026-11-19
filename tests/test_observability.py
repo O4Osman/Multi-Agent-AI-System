@@ -129,11 +129,21 @@ class TestGetLangfuseHandler:
             "LANGFUSE_HOST": "http://localhost:3000",
         }):
             with patch("observability.langfuse_setup._langfuse_configured",
+                       return_value=True), \
+                 patch("observability.langfuse_setup._langfuse_reachable",
                        return_value=True):
                 handler = get_langfuse_handler("session-001", user_id="test-user")
                 assert handler is not None, (
                     "Handler should be created when credentials are present"
                 )
+
+    def test_returns_none_when_server_unreachable(self):
+        """Configured but unreachable Langfuse must disable tracing, not raise."""
+        with patch("observability.langfuse_setup._langfuse_configured",
+                   return_value=True), \
+             patch("observability.langfuse_setup._langfuse_reachable",
+                   return_value=False):
+            assert get_langfuse_handler("session-001") is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
