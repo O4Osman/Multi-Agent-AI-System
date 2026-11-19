@@ -36,9 +36,53 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
+import subprocess
 import uuid
 import streamlit as st
 from langgraph.types import Command
+
+
+# ── Deployment setup (Streamlit Cloud) ────────────────────────────────────────
+# Must run before the agent modules are imported: they read env vars at import.
+
+def _load_secrets_into_env():
+    """Copy flat string entries from Streamlit secrets into os.environ."""
+    try:
+        for key, value in st.secrets.items():
+            if isinstance(value, (str, int, float, bool)):
+                os.environ.setdefault(key, str(value))
+    except Exception:
+        pass  # no secrets file (local run): .env is used instead
+
+_load_secrets_into_env()
+
+QUIZ_PORT, BUDDY_PORT = 9011, 9002
+
+if os.getenv("START_SIDECARS", "false").lower() == "true":
+    # Streamlit Cloud runs a single process, so the A2A quiz service and the
+    # CrewAI Study Buddy are launched alongside the app on loopback.
+    os.environ["QUIZ_SERVICE_URL"] = f"http://127.0.0.1:{QUIZ_PORT}"
+    os.environ["STUDY_BUDDY_URL"] = f"http://127.0.0.1:{BUDDY_PORT}"
+
+
+@st.cache_resource
+def start_sidecars():
+    """Start the A2A quiz service and Study Buddy once per server process."""
+    root = Path(__file__).parent
+    env = {**os.environ, "PYTHONPATH": str(root / "src")}
+    scripts = [
+        root / "src" / "a2a_services" / "quiz_service.py",
+        root / "src" / "crewai_agent" / "study_buddy.py",
+    ]
+    return [
+        subprocess.Popen([sys.executable, str(s)], env=env, cwd=str(root))
+        for s in scripts
+    ]
+
+if os.getenv("START_SIDECARS", "false").lower() == "true":
+    start_sidecars()
+
 
 from graph.workflow import build_graph
 from graph.state import initial_state, StudyRoadmap, QuizResult, QuizQuestion

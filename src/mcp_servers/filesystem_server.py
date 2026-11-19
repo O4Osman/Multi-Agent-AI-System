@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-from litellm.proxy.client.cli.commands.teams import available
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("Filesystem Server")

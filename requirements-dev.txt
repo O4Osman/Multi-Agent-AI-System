@@ -1,0 +1,11 @@
+# Local development only: tests and evaluation. Not installed on Streamlit Cloud.
+-r requirements.txt
+
+# ── Evaluation ────────────────────────────────────────────────────────────
+deepeval==3.9.1
+litellm==1.82.4
+langchain-ollama==1.0.0
+
+# ── Testing ───────────────────────────────────────────────────────────────
+pytest==8.3.0
+pytest-asyncio==0.25.0
